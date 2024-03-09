@@ -10,6 +10,7 @@ class NoteApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Note Taking App',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         visualDensity: VisualDensity.adaptivePlatformDensity,
         colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.deepPurple)
@@ -127,8 +128,7 @@ class _NoteHomePageState extends State<NoteHomePage> {
               controller: _titleController,
               decoration: InputDecoration(
                 labelText: 'Title',
-                border:
-                    OutlineInputBorder(), // استفاده از حاشیه‌های گرد برای فیلد ورودی
+                border: OutlineInputBorder(), // حاشیه‌های گرد برای فیلد ورودی
               ),
             ),
           ),
@@ -138,8 +138,7 @@ class _NoteHomePageState extends State<NoteHomePage> {
               controller: _contentController,
               decoration: InputDecoration(
                 labelText: 'Content',
-                border:
-                    OutlineInputBorder(), // استفاده از حاشیه‌های گرد برای فیلد ورودی
+                border: OutlineInputBorder(), // حاشیه‌های گرد برای فیلد ورودی
               ),
               maxLines: 3,
             ),
@@ -159,7 +158,7 @@ class _NoteHomePageState extends State<NoteHomePage> {
               style: ButtonStyle(
                 backgroundColor: MaterialStateProperty.all(Theme.of(context)
                     .colorScheme
-                    .secondary), // استفاده از رنگ فرعی برای دکمه
+                    .secondary), // رنگ فرعی برای دکمه
                 shape: MaterialStateProperty.all<RoundedRectangleBorder>(
                   RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30.0), // شکل گرد دکمه
@@ -247,16 +246,15 @@ class _EditNotePageState extends State<EditNotePage> {
               controller: _titleController,
               decoration: InputDecoration(
                 labelText: 'Title',
-                border:
-                    OutlineInputBorder(), // استفاده از حاشیه‌های گرد برای فیلد ورودی
+                border: OutlineInputBorder(), // حاشیه‌های گرد برای فیلد ورودی
               ),
             ),
+            const SizedBox(height: 20),
             TextFormField(
               controller: _contentController,
               decoration: InputDecoration(
                 labelText: 'Content',
-                border:
-                    OutlineInputBorder(), // استفاده از حاشیه‌های گرد برای فیلد ورودی
+                border: OutlineInputBorder(), // حاشیه‌های گرد برای فیلد ورودی
               ),
               maxLines: 3,
             ),
@@ -281,8 +279,9 @@ class _EditNotePageState extends State<EditNotePage> {
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  // استفاده از رنگ فرعی برای دکمه
-                  backgroundColor: Colors.blueAccent,
+                  backgroundColor: Theme.of(context)
+                      .colorScheme
+                      .secondary, // رنگ فرعی برای دکمه
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30.0), // شکل گرد دکمه
                   ),
