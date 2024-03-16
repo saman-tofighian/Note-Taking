@@ -39,12 +39,15 @@ class _NoteHomePageState extends State<NoteHomePage> {
 
   _loadNotes() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String> notesStringList = prefs.getStringList('notes') ?? [];
-    setState(() {
-      _notes = notesStringList
-          .map((noteString) => Note.fromMap(noteString as Map<String, dynamic>))
-          .toList();
-    });
+    List<String>? notesStringList = prefs.getStringList('notes');
+    if (notesStringList != null) {
+      setState(() {
+        _notes = notesStringList
+            .map((noteString) =>
+                Note.fromMap(noteString as Map<String, dynamic>))
+            .toList();
+      });
+    }
   }
 
   _saveNotes() async {
@@ -59,9 +62,11 @@ class _NoteHomePageState extends State<NoteHomePage> {
       _notes.add(Note(
         title: _titleController.text,
         content: _contentController.text,
+        pinned: false,
       ));
       _titleController.clear();
       _contentController.clear();
+      _arrangeNotes(); // Arrange notes after adding new note
     });
     _saveNotes();
   }
@@ -77,14 +82,13 @@ class _NoteHomePageState extends State<NoteHomePage> {
             TextButton(
               child: Text("Cancel"),
               onPressed: () {
-                Navigator.of(context).pop(false); // Close the dialog
+                Navigator.of(context).pop(false);
               },
             ),
             TextButton(
               child: Text("Delete"),
               onPressed: () {
-                Navigator.of(context)
-                    .pop(true); // Close the dialog with true result
+                Navigator.of(context).pop(true);
               },
             ),
           ],
@@ -114,6 +118,38 @@ class _NoteHomePageState extends State<NoteHomePage> {
     }
   }
 
+  _togglePin(int index) {
+    setState(() {
+      _notes[index].pinned = !_notes[index].pinned;
+      _arrangeNotes(); // Arrange notes after pinning/unpinning
+    });
+    _saveNotes();
+  }
+
+  // Function to arrange notes based on their pinned status
+  void _arrangeNotes() {
+    List<Note> pinnedNotes = [];
+    List<Note> unpinnedNotes = [];
+
+    for (Note note in _notes) {
+      if (note.pinned) {
+        pinnedNotes.add(note);
+      } else {
+        unpinnedNotes.add(note);
+      }
+    }
+
+    int insertIndex = pinnedNotes.isEmpty ? 0 : pinnedNotes.length;
+    for (Note note in unpinnedNotes) {
+      pinnedNotes.insert(insertIndex, note);
+      insertIndex++;
+    }
+
+    setState(() {
+      _notes = pinnedNotes;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -128,7 +164,7 @@ class _NoteHomePageState extends State<NoteHomePage> {
               controller: _titleController,
               decoration: InputDecoration(
                 labelText: 'Title',
-                border: OutlineInputBorder(), // حاشیه‌های گرد برای فیلد ورودی
+                border: OutlineInputBorder(),
               ),
             ),
           ),
@@ -138,7 +174,7 @@ class _NoteHomePageState extends State<NoteHomePage> {
               controller: _contentController,
               decoration: InputDecoration(
                 labelText: 'Content',
-                border: OutlineInputBorder(), // حاشیه‌های گرد برای فیلد ورودی
+                border: OutlineInputBorder(),
               ),
               maxLines: 3,
             ),
@@ -156,15 +192,14 @@ class _NoteHomePageState extends State<NoteHomePage> {
                 ),
               ),
               style: ButtonStyle(
-                backgroundColor: MaterialStateProperty.all(Theme.of(context)
-                    .colorScheme
-                    .secondary), // رنگ فرعی برای دکمه
+                backgroundColor: MaterialStateProperty.all(
+                    Theme.of(context).colorScheme.secondary),
                 shape: MaterialStateProperty.all<RoundedRectangleBorder>(
                   RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30.0), // شکل گرد دکمه
+                    borderRadius: BorderRadius.circular(30.0),
                   ),
                 ),
-                elevation: MaterialStateProperty.all(8), // برجستگی دکمه
+                elevation: MaterialStateProperty.all(8),
               ),
             ),
           ),
@@ -189,6 +224,12 @@ class _NoteHomePageState extends State<NoteHomePage> {
                         IconButton(
                           icon: Icon(Icons.edit),
                           onPressed: () => _editNote(index),
+                        ),
+                        IconButton(
+                          icon: Icon(_notes[index].pinned
+                              ? Icons.push_pin
+                              : Icons.push_pin_outlined),
+                          onPressed: () => _togglePin(index),
                         ),
                         IconButton(
                           icon: Icon(Icons.delete),
@@ -246,7 +287,7 @@ class _EditNotePageState extends State<EditNotePage> {
               controller: _titleController,
               decoration: InputDecoration(
                 labelText: 'Title',
-                border: OutlineInputBorder(), // حاشیه‌های گرد برای فیلد ورودی
+                border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 20),
@@ -254,7 +295,7 @@ class _EditNotePageState extends State<EditNotePage> {
               controller: _contentController,
               decoration: InputDecoration(
                 labelText: 'Content',
-                border: OutlineInputBorder(), // حاشیه‌های گرد برای فیلد ورودی
+                border: OutlineInputBorder(),
               ),
               maxLines: 3,
             ),
@@ -267,6 +308,7 @@ class _EditNotePageState extends State<EditNotePage> {
                     Note(
                       title: _titleController.text,
                       content: _contentController.text,
+                      pinned: widget.note.pinned,
                     ),
                   );
                 },
@@ -279,13 +321,11 @@ class _EditNotePageState extends State<EditNotePage> {
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context)
-                      .colorScheme
-                      .secondary, // رنگ فرعی برای دکمه
+                  backgroundColor: Theme.of(context).colorScheme.secondary,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30.0), // شکل گرد دکمه
+                    borderRadius: BorderRadius.circular(30.0),
                   ),
-                  elevation: 8, // برجستگی دکمه
+                  elevation: 8,
                 ),
               ),
             ),
@@ -306,16 +346,19 @@ class _EditNotePageState extends State<EditNotePage> {
 class Note {
   String title;
   String content;
+  bool pinned;
 
   Note({
     required this.title,
     required this.content,
+    required this.pinned,
   });
 
   Map<String, dynamic> toMap() {
     return {
       'title': title,
       'content': content,
+      'pinned': pinned,
     };
   }
 
@@ -323,6 +366,7 @@ class Note {
     return Note(
       title: map['title'],
       content: map['content'],
+      pinned: map['pinned'] ?? false,
     );
   }
 }
