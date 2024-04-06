@@ -207,40 +207,48 @@ class _NoteHomePageState extends State<NoteHomePage> {
             child: ListView.builder(
               itemCount: _notes.length,
               itemBuilder: (context, index) {
-                return Card(
-                  elevation: 4,
-                  margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                  child: ListTile(
-                    title: Text(
-                      _notes[index].title,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _notes[index].selected = !_notes[index].selected;
+                    });
+                  },
+                  child: Card(
+                    elevation: 4,
+                    margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    color: _notes[index].selected ? Colors.green : null,
+                    child: ListTile(
+                      title: Text(
+                        _notes[index].title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    subtitle: Text(_notes[index].content),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        IconButton(
-                          icon: Icon(Icons.edit),
-                          onPressed: () => _editNote(index),
-                        ),
-                        IconButton(
-                          icon: Icon(_notes[index].pinned
-                              ? Icons.push_pin
-                              : Icons.push_pin_outlined),
-                          onPressed: () => _togglePin(index),
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.delete),
-                          onPressed: () async {
-                            bool? delete = await _deleteNoteDialog(index);
-                            if (delete == true) {
-                              _deleteNote(index);
-                            }
-                          },
-                        ),
-                      ],
+                      subtitle: Text(_notes[index].content),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          IconButton(
+                            icon: Icon(Icons.edit),
+                            onPressed: () => _editNote(index),
+                          ),
+                          IconButton(
+                            icon: Icon(_notes[index].pinned
+                                ? Icons.push_pin
+                                : Icons.push_pin_outlined),
+                            onPressed: () => _togglePin(index),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.delete),
+                            onPressed: () async {
+                              bool? delete = await _deleteNoteDialog(index);
+                              if (delete == true) {
+                                _deleteNote(index);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );
@@ -347,11 +355,13 @@ class Note {
   String title;
   String content;
   bool pinned;
+  bool selected; // Add selected field
 
   Note({
     required this.title,
     required this.content,
     required this.pinned,
+    this.selected = false, // Initialize selected as false
   });
 
   Map<String, dynamic> toMap() {
