@@ -29,7 +29,9 @@ class NoteHomePage extends StatefulWidget {
 class _NoteHomePageState extends State<NoteHomePage> {
   TextEditingController _titleController = TextEditingController();
   TextEditingController _contentController = TextEditingController();
+  TextEditingController _searchController = TextEditingController();
   List<Note> _notes = [];
+  List<Note> _filteredNotes = [];
 
   @override
   void initState() {
@@ -46,6 +48,7 @@ class _NoteHomePageState extends State<NoteHomePage> {
             .map((noteString) =>
                 Note.fromMap(noteString as Map<String, dynamic>))
             .toList();
+        _filteredNotes = _notes; // Initially set filtered notes to all notes
       });
     }
   }
@@ -147,6 +150,22 @@ class _NoteHomePageState extends State<NoteHomePage> {
 
     setState(() {
       _notes = pinnedNotes;
+      _applySearchFilter(); // Reapply search filter after rearranging notes
+    });
+  }
+
+  // Function to apply search filter on notes
+  void _applySearchFilter() {
+    String searchTerm = _searchController.text.toLowerCase();
+    setState(() {
+      if (searchTerm.isEmpty) {
+        _filteredNotes = _notes; // If search term is empty, show all notes
+      } else {
+        _filteredNotes = _notes.where((note) {
+          return note.title.toLowerCase().contains(searchTerm) ||
+              note.content.toLowerCase().contains(searchTerm);
+        }).toList();
+      }
     });
   }
 
@@ -160,7 +179,20 @@ class _NoteHomePageState extends State<NoteHomePage> {
         children: <Widget>[
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: TextFormField(
+            child: TextField(
+              controller: _searchController,
+              onChanged: (value) {
+                _applySearchFilter();
+              },
+              decoration: InputDecoration(
+                labelText: 'Search',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
               controller: _titleController,
               decoration: InputDecoration(
                 labelText: 'Title',
@@ -170,7 +202,7 @@ class _NoteHomePageState extends State<NoteHomePage> {
           ),
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: TextFormField(
+            child: TextField(
               controller: _contentController,
               decoration: InputDecoration(
                 labelText: 'Content',
@@ -205,26 +237,30 @@ class _NoteHomePageState extends State<NoteHomePage> {
           ),
           Expanded(
             child: ListView.builder(
-              itemCount: _notes.length,
+              itemCount: _filteredNotes.length,
               itemBuilder: (context, index) {
                 return GestureDetector(
                   onTap: () {
                     setState(() {
-                      _notes[index].selected = !_notes[index].selected;
+                      _filteredNotes[index].selected =
+                          !_filteredNotes[index].selected;
                     });
                   },
                   child: Card(
                     elevation: 4,
-                    margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                    color: _notes[index].selected ? Colors.green : null,
+                    margin:
+                        EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    color: _filteredNotes[index].selected
+                        ? Colors.green
+                        : null,
                     child: ListTile(
                       title: Text(
-                        _notes[index].title,
+                        _filteredNotes[index].title,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      subtitle: Text(_notes[index].content),
+                      subtitle: Text(_filteredNotes[index].content),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
@@ -233,7 +269,7 @@ class _NoteHomePageState extends State<NoteHomePage> {
                             onPressed: () => _editNote(index),
                           ),
                           IconButton(
-                            icon: Icon(_notes[index].pinned
+                            icon: Icon(_filteredNotes[index].pinned
                                 ? Icons.push_pin
                                 : Icons.push_pin_outlined),
                             onPressed: () => _togglePin(index),
@@ -241,7 +277,8 @@ class _NoteHomePageState extends State<NoteHomePage> {
                           IconButton(
                             icon: Icon(Icons.delete),
                             onPressed: () async {
-                              bool? delete = await _deleteNoteDialog(index);
+                              bool? delete =
+                                  await _deleteNoteDialog(index);
                               if (delete == true) {
                                 _deleteNote(index);
                               }
@@ -291,7 +328,7 @@ class _EditNotePageState extends State<EditNotePage> {
         padding: const EdgeInsets.all(8.0),
         child: Column(
           children: <Widget>[
-            TextFormField(
+            TextField(
               controller: _titleController,
               decoration: InputDecoration(
                 labelText: 'Title',
@@ -299,7 +336,7 @@ class _EditNotePageState extends State<EditNotePage> {
               ),
             ),
             const SizedBox(height: 20),
-            TextFormField(
+            TextField(
               controller: _contentController,
               decoration: InputDecoration(
                 labelText: 'Content',
@@ -355,13 +392,13 @@ class Note {
   String title;
   String content;
   bool pinned;
-  bool selected; // Add selected field
+  bool selected;
 
   Note({
     required this.title,
     required this.content,
     required this.pinned,
-    this.selected = false, // Initialize selected as false
+    this.selected = false,
   });
 
   Map<String, dynamic> toMap() {
