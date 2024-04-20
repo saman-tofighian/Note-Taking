@@ -32,6 +32,14 @@ class _NoteHomePageState extends State<NoteHomePage> {
   TextEditingController _searchController = TextEditingController();
   List<Note> _notes = [];
   List<Note> _filteredNotes = [];
+  List<String> _folders = [
+    'Personal',
+    'Work',
+    'Ideas',
+    'Others'
+  ]; // Add list of folders
+
+  String _selectedFolder = ''; // Initialize selected folder as empty string
 
   @override
   void initState() {
@@ -65,6 +73,7 @@ class _NoteHomePageState extends State<NoteHomePage> {
       _notes.add(Note(
         title: _titleController.text,
         content: _contentController.text,
+        folder: _selectedFolder, // Set folder for the new note
         pinned: false,
       ));
       _titleController.clear();
@@ -162,8 +171,14 @@ class _NoteHomePageState extends State<NoteHomePage> {
         _filteredNotes = _notes; // If search term is empty, show all notes
       } else {
         _filteredNotes = _notes.where((note) {
-          return note.title.toLowerCase().contains(searchTerm) ||
-              note.content.toLowerCase().contains(searchTerm);
+          if (note.title.toLowerCase().contains(searchTerm) ||
+              note.content.toLowerCase().contains(searchTerm)) {
+            return true; // If title or content contains search term
+          } else {
+            return note.folder.toLowerCase().contains(searchTerm) &&
+                (note.folder == _selectedFolder);
+            // If search term matches folder and selected folder
+          }
         }).toList();
       }
     });
@@ -177,6 +192,28 @@ class _NoteHomePageState extends State<NoteHomePage> {
       ),
       body: Column(
         children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: DropdownButtonFormField(
+              value: _selectedFolder.isNotEmpty ? _selectedFolder : null,
+              onChanged: (value) {
+                setState(() {
+                  _selectedFolder = value.toString();
+                  _applySearchFilter(); // Call the search filter function
+                });
+              },
+              items: _folders.map((folder) {
+                return DropdownMenuItem(
+                  value: folder,
+                  child: Text(folder),
+                );
+              }).toList(),
+              decoration: InputDecoration(
+                labelText: 'Select Folder',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextField(
@@ -214,7 +251,30 @@ class _NoteHomePageState extends State<NoteHomePage> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16.0),
             child: ElevatedButton(
-              onPressed: _addNote,
+              onPressed: () {
+                if (_titleController.text.isNotEmpty &&
+                    _contentController.text.isNotEmpty) {
+                  _addNote();
+                } else {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: Text("Empty Fields"),
+                        content: Text("Please fill in both title and content."),
+                        actions: <Widget>[
+                          TextButton(
+                            child: Text("OK"),
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                }
+              },
               child: Padding(
                 padding:
                     const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
@@ -248,11 +308,8 @@ class _NoteHomePageState extends State<NoteHomePage> {
                   },
                   child: Card(
                     elevation: 4,
-                    margin:
-                        EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                    color: _filteredNotes[index].selected
-                        ? Colors.green
-                        : null,
+                    margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                    color: _filteredNotes[index].selected ? Colors.green : null,
                     child: ListTile(
                       title: Text(
                         _filteredNotes[index].title,
@@ -277,8 +334,7 @@ class _NoteHomePageState extends State<NoteHomePage> {
                           IconButton(
                             icon: Icon(Icons.delete),
                             onPressed: () async {
-                              bool? delete =
-                                  await _deleteNoteDialog(index);
+                              bool? delete = await _deleteNoteDialog(index);
                               if (delete == true) {
                                 _deleteNote(index);
                               }
@@ -354,6 +410,7 @@ class _EditNotePageState extends State<EditNotePage> {
                       title: _titleController.text,
                       content: _contentController.text,
                       pinned: widget.note.pinned,
+                      folder: widget.note.folder, // Preserve folder information
                     ),
                   );
                 },
@@ -392,13 +449,15 @@ class Note {
   String title;
   String content;
   bool pinned;
-  bool selected;
+  bool selected; // Add selected field
+  String folder; // Add folder field
 
   Note({
     required this.title,
     required this.content,
     required this.pinned,
-    this.selected = false,
+    required this.folder, // Initialize folder field
+    this.selected = false, // Initialize selected as false
   });
 
   Map<String, dynamic> toMap() {
@@ -406,6 +465,7 @@ class Note {
       'title': title,
       'content': content,
       'pinned': pinned,
+      'folder': folder, // Save folder information
     };
   }
 
@@ -414,6 +474,8 @@ class Note {
       title: map['title'],
       content: map['content'],
       pinned: map['pinned'] ?? false,
+      folder: map['folder'] ??
+          'Others', // Initialize folder as 'Others' if not provided
     );
   }
 }
