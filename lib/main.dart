@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 void main() {
   runApp(NoteApp());
@@ -45,6 +47,28 @@ class _NoteHomePageState extends State<NoteHomePage> {
   void initState() {
     super.initState();
     _loadNotes();
+    fetchNotes(); // Call fetchNotes when the app starts
+  }
+
+  // Function to fetch notes from the server
+  void fetchNotes() async {
+    try {
+      final response =
+          await http.get(Uri.parse('http://127.0.0.1:8000/notes/'));
+      if (response.statusCode == 200) {
+        List<dynamic> notesData = json.decode(response.body);
+        List<Note> fetchedNotes =
+            notesData.map((note) => Note.fromMap(note)).toList();
+        setState(() {
+          _notes = fetchedNotes;
+          _filteredNotes = _notes;
+        });
+      } else {
+        print('Failed to fetch notes. Error: ${response.reasonPhrase}');
+      }
+    } catch (error) {
+      print('Error occurred while fetching notes: $error');
+    }
   }
 
   _loadNotes() async {
@@ -53,8 +77,7 @@ class _NoteHomePageState extends State<NoteHomePage> {
     if (notesStringList != null) {
       setState(() {
         _notes = notesStringList
-            .map((noteString) =>
-                Note.fromMap(noteString as Map<String, dynamic>))
+            .map((noteString) => Note.fromMap(json.decode(noteString)))
             .toList();
         _filteredNotes = _notes; // Initially set filtered notes to all notes
       });
@@ -64,13 +87,14 @@ class _NoteHomePageState extends State<NoteHomePage> {
   _saveNotes() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     List<String> notesStringList =
-        _notes.map((note) => note.toMap()).cast<String>().toList();
+        _notes.map((note) => json.encode(note.toMap())).toList();
     await prefs.setStringList('notes', notesStringList);
   }
 
   _addNote() {
     setState(() {
       _notes.add(Note(
+        id: -1, // Temporary id
         title: _titleController.text,
         content: _contentController.text,
         folder: _selectedFolder, // Set folder for the new note
@@ -114,6 +138,7 @@ class _NoteHomePageState extends State<NoteHomePage> {
       _notes.removeAt(index);
     });
     _saveNotes();
+    deleteNoteFromServer(_filteredNotes[index].id); // Delete note from server
   }
 
   _editNote(int index) async {
@@ -255,6 +280,18 @@ class _NoteHomePageState extends State<NoteHomePage> {
                 if (_titleController.text.isNotEmpty &&
                     _contentController.text.isNotEmpty) {
                   _addNote();
+                  // ارسال درخواست POST
+                  createNote(_titleController.text, _contentController.text)
+                      .then((response) {
+                    if (response.statusCode == 201) {
+                      print('Note created successfully.');
+                    } else {
+                      print(
+                          'Failed to create note. Error: ${response.reasonPhrase}');
+                    }
+                  }).catchError((error) {
+                    print('Error occurred while creating note: $error');
+                  });
                 } else {
                   showDialog(
                     context: context,
@@ -336,7 +373,7 @@ class _NoteHomePageState extends State<NoteHomePage> {
                             onPressed: () async {
                               bool? delete = await _deleteNoteDialog(index);
                               if (delete == true) {
-                                _deleteNote(index);
+                                _deleteNote(index); // Delete note
                               }
                             },
                           ),
@@ -351,6 +388,41 @@ class _NoteHomePageState extends State<NoteHomePage> {
         ],
       ),
     );
+  }
+
+  Future<http.Response> createNote(String title, String text) {
+    return http.post(
+      Uri.parse('http://127.0.0.1:8000/notes/'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Authorization':
+            'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzE0Mzk1MjgwLCJpYXQiOjE3MTQzMDg4ODAsImp0aSI6IjJmYTgzMjcyZjI3YTQwOGU5ODExODQ4YWQ0ZDFkODdlIiwidXNlcl9pZCI6Mn0.k83dxem4QgNkihBiHoGAvPsSX9FMSuL7fD7Rt4oJxOQ'
+      },
+      body: jsonEncode(<String, String>{
+        'title': title,
+        'text': text,
+      }),
+    );
+  }
+
+  void deleteNoteFromServer(int id) async {
+    try {
+      final response = await http.delete(
+        Uri.parse(
+            'http://127.0.0.1:8000/notes/$id'), // Add id to server address
+        headers: <String, String>{
+          'Authorization':
+              'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzE0Mzk1MjgwLCJpYXQiOjE3MTQzMDg4ODAsImp0aSI6IjJmYTgzMjcyZjI3YTQwOGU5ODExODQ4YWQ0ZDFkODdlIiwidXNlcl9pZCI6Mn0.k83dxem4QgNkihBiHoGAvPsSX9FMSuL7fD7Rt4oJxOQ'
+        },
+      );
+      if (response.statusCode == 204) {
+        print('Note deleted successfully.');
+      } else {
+        print('Failed to delete note. Error: ${response.reasonPhrase}');
+      }
+    } catch (error) {
+      print('Error occurred while deleting note: $error');
+    }
   }
 }
 
@@ -407,6 +479,7 @@ class _EditNotePageState extends State<EditNotePage> {
                   Navigator.pop(
                     context,
                     Note(
+                      id: widget.note.id, // Preserve id
                       title: _titleController.text,
                       content: _contentController.text,
                       pinned: widget.note.pinned,
@@ -446,6 +519,7 @@ class _EditNotePageState extends State<EditNotePage> {
 }
 
 class Note {
+  int id; // Add id
   String title;
   String content;
   bool pinned;
@@ -453,6 +527,7 @@ class Note {
   String folder; // Add folder field
 
   Note({
+    required this.id, // Add id
     required this.title,
     required this.content,
     required this.pinned,
@@ -462,6 +537,7 @@ class Note {
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id, // Add id
       'title': title,
       'content': content,
       'pinned': pinned,
@@ -471,6 +547,7 @@ class Note {
 
   factory Note.fromMap(Map<String, dynamic> map) {
     return Note(
+      id: map['id'], // Add id
       title: map['title'],
       content: map['content'],
       pinned: map['pinned'] ?? false,
