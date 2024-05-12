@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'login_page.dart';
 
 class RegistrationPage extends StatefulWidget {
   @override
@@ -57,7 +57,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
             SizedBox(height: 16.0),
             TextButton(
               onPressed: () {
-                Navigator.pushReplacementNamed(context, '/login');
+                Navigator.pushNamed(context, '/LoginPage');
               },
               child: Text('آیا قبلاً ثبت نام کرده‌اید؟ ورود'),
             ),
@@ -68,22 +68,18 @@ class _RegistrationPageState extends State<RegistrationPage> {
   }
 
   void _register() {
-    // گرفتن اطلاعات فرم از کنترلر‌ها
     String username = _usernameController.text;
     String email = _emailController.text;
     String password = _passwordController.text;
 
-    // ارسال اطلاعات به سرور
     _sendFormDataToServer(username, email, password);
   }
 
   Future<void> _sendFormDataToServer(
       String username, String email, String password) async {
-    // URL سرور مقصد
     String serverUrl = 'http://127.0.0.1:8000/api/register';
 
     try {
-      // ارسال درخواست POST به سرور
       var response = await http.post(
         Uri.parse(serverUrl),
         body: {
@@ -93,18 +89,34 @@ class _RegistrationPageState extends State<RegistrationPage> {
         },
       );
 
-      // بررسی وضعیت پاسخ از سرور
       if (response.statusCode == 200) {
-        // پاسخ موفق
-        print('Registration successful.');
+        _showRegistrationSuccessDialog(context);
       } else {
-        // پاسخ ناموفق
         print(
-            'Failed to register. Server returned status code: ${response.statusCode}');
+            'ثبت نام ناموفق بود. سرور با کد وضعیت ${response.statusCode} پاسخ داده است.');
       }
     } catch (e) {
-      // خطا در ارسال درخواست
-      print('Error sending registration request: $e');
+      print('خطا در ارسال درخواست ثبت نام: $e');
     }
+  }
+
+  void _showRegistrationSuccessDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Icon(Icons.check_circle, color: Colors.green, size: 48.0),
+          content: Text('ثبت نام با موفقیت انجام شد.'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('باشه'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
