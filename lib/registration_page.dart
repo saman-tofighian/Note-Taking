@@ -1,6 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'login_page.dart';
 
 class RegistrationPage extends StatefulWidget {
   @override
@@ -43,9 +43,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
             CheckboxListTile(
               title: Text('تمام قوانین و شرایط را می‌پذیرم'),
               value: _acceptTerms,
-              onChanged: (value) {
+              onChanged: (bool? value) {
                 setState(() {
-                  _acceptTerms = value!;
+                  _acceptTerms = value ?? false;
                 });
               },
             ),
@@ -68,16 +68,21 @@ class _RegistrationPageState extends State<RegistrationPage> {
   }
 
   void _register() {
-    String username = _usernameController.text;
-    String email = _emailController.text;
-    String password = _passwordController.text;
-
-    _sendFormDataToServer(username, email, password);
+    if (_acceptTerms) {
+      _sendFormDataToServer(
+        _usernameController.text,
+        _emailController.text,
+        _passwordController.text,
+      );
+    } else {
+      // نمایش پیام خطا اگر کاربر قوانین و شرایط را نپذیرفته باشد
+      _showErrorDialog('لطفاً قوانین و شرایط را بپذیرید.');
+    }
   }
 
   Future<void> _sendFormDataToServer(
       String username, String email, String password) async {
-    String serverUrl = 'http://127.0.0.1:8000/api/register';
+    String serverUrl = 'http://127.0.0.1:8000/api/register/';
 
     try {
       var response = await http.post(
@@ -89,19 +94,25 @@ class _RegistrationPageState extends State<RegistrationPage> {
         },
       );
 
-      if (response.statusCode == 200) {
+      // لاگ کردن پاسخ سرور برای بررسی محتوای آن
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // نمایش دیالوگ موفقیت و انتقال به صفحه NoteApp
         _showRegistrationSuccessDialog(context);
       } else {
-        print(
-            'ثبت نام ناموفق بود. سرور با کد وضعیت ${response.statusCode} پاسخ داده است.');
+        // نمایش پیام خطا اگر کد وضعیت HTTP نشان دهنده موفقیت نیست
+        _showErrorDialog('خطا در ثبت نام. لطفاً دوباره تلاش کنید.');
       }
     } catch (e) {
-      print('خطا در ارسال درخواست ثبت نام: $e');
+      // نمایش پیام خطا اگر ارتباط با سرور با مشکل مواجه شود
+      _showErrorDialog('خطا در برقراری ارتباط با سرور: $e');
     }
   }
 
-  void _showRegistrationSuccessDialog(BuildContext context) {
-    showDialog(
+  void _showRegistrationSuccessDialog(BuildContext context) async {
+    await showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
@@ -110,7 +121,30 @@ class _RegistrationPageState extends State<RegistrationPage> {
           actions: <Widget>[
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(context).pop(); // بستن دیالوگ
+              },
+              child: Text('باشه'),
+            ),
+          ],
+        );
+      },
+    );
+
+    // انتقال به صفحه NoteApp پس از بسته شدن دیالوگ
+    Navigator.pushReplacementNamed(context, '/NoteApp');
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Icon(Icons.error_outline, color: Colors.red, size: 48.0),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // بستن دیالوگ
               },
               child: Text('باشه'),
             ),

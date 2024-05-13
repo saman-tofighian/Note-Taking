@@ -3,22 +3,22 @@ import 'package:http/http.dart' as http;
 import 'dart:convert'; // برای تبدیل داده‌های JSON
 
 class LoginPage extends StatelessWidget {
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   Future<void> _login(BuildContext context) async {
-    String email = _emailController.text;
+    String username = _usernameController.text;
     String password = _passwordController.text;
 
     // آدرس سرور
-    String serverUrl = 'http://127.0.0.1:8000/api/token_obtain_pair/';
+    String serverUrl = 'http://127.0.0.1:8000/api/token/';
 
     try {
       // ارسال درخواست POST به سرور برای دریافت توکن
       var response = await http.post(
         Uri.parse(serverUrl),
         body: {
-          'email': email,
+          'username': username,
           'password': password,
         },
       );
@@ -106,7 +106,7 @@ class LoginPage extends StatelessWidget {
                 ),
               ),
               TextFormField(
-                controller: _emailController,
+                controller: _usernameController,
                 autofocus: true,
                 decoration: const InputDecoration(
                   labelText: 'ایمیل',
