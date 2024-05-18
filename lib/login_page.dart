@@ -1,6 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert'; // برای تبدیل داده‌های JSON
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatelessWidget {
   final TextEditingController _usernameController = TextEditingController();
@@ -17,10 +18,13 @@ class LoginPage extends StatelessWidget {
       // ارسال درخواست POST به سرور برای دریافت توکن
       var response = await http.post(
         Uri.parse(serverUrl),
-        body: {
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode({
           'username': username,
           'password': password,
-        },
+        }),
       );
 
       // بررسی کد وضعیت درخواست
@@ -30,49 +34,43 @@ class LoginPage extends StatelessWidget {
 
         // دریافت توکن از پاسخ سرور
         String token = data['access'];
+        print('Token: $token');
 
-        // مثال: انتقال به صفحه دیگر (مانند note_page.dart)
-        Navigator.pushReplacementNamed(context, '/NotePage');
+        // ذخیره توکن در حافظه محلی
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('access_token', token);
+
+        // انتقال به صفحه دیگر (مانند NotePage)
+        Navigator.pushReplacementNamed(context, '/NoteApp');
       } else {
-        // نمایش پیام خطا
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: Text('خطا'),
-              content: Text('ورود ناموفق بود. لطفاً دوباره تلاش کنید.'),
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: Text('باشه'),
-                ),
-              ],
-            );
-          },
-        );
+        // نمایش پیام خطا با جزئیات بیشتر
+        var errorData = json.decode(response.body);
+        _showErrorDialog(context, 'ورود ناموفق بود: ${errorData['detail']}');
       }
     } catch (e) {
       // نمایش پیام خطا
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('خطا'),
-            content: Text('مشکلی در ارتباط با سرور پیش آمده است.'),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: Text('باشه'),
-              ),
-            ],
-          );
-        },
-      );
+      _showErrorDialog(context, 'مشکلی در ارتباط با سرور پیش آمده است: $e');
     }
+  }
+
+  void _showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('خطا'),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('باشه'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -109,7 +107,7 @@ class LoginPage extends StatelessWidget {
                 controller: _usernameController,
                 autofocus: true,
                 decoration: const InputDecoration(
-                  labelText: 'ایمیل',
+                  labelText: 'نام کاربری',
                   border: OutlineInputBorder(),
                   contentPadding:
                       EdgeInsets.symmetric(vertical: 15.0, horizontal: 20.0),

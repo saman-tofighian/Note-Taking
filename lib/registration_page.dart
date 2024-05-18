@@ -131,7 +131,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
     );
 
     // انتقال به صفحه NoteApp پس از بسته شدن دیالوگ
-    Navigator.pushReplacementNamed(context, '/NoteApp');
+    // Navigator.pushReplacementNamed(context, '/NoteApp');
+    Navigator.pushNamed(context, '/LoginPage');
   }
 
   void _showErrorDialog(String message) {
