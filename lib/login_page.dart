@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatelessWidget {
   final TextEditingController _usernameController = TextEditingController();
@@ -28,7 +27,7 @@ class LoginPage extends StatelessWidget {
       );
 
       // بررسی کد وضعیت درخواست
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         // پاسخ را به داده JSON تبدیل کرده و از آن استفاده می‌کنیم
         var data = json.decode(response.body);
 
@@ -36,16 +35,11 @@ class LoginPage extends StatelessWidget {
         String token = data['access'];
         print('Token: $token');
 
-        // ذخیره توکن در حافظه محلی
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString('access_token', token);
-
         // انتقال به صفحه دیگر (مانند NotePage)
         Navigator.pushReplacementNamed(context, '/NoteApp');
       } else {
-        // نمایش پیام خطا با جزئیات بیشتر
-        var errorData = json.decode(response.body);
-        _showErrorDialog(context, 'ورود ناموفق بود: ${errorData['detail']}');
+        // نمایش پیام خطا
+        _showErrorDialog(context, 'ورود ناموفق بود. لطفاً دوباره تلاش کنید.');
       }
     } catch (e) {
       // نمایش پیام خطا

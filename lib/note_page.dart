@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:url_launcher/url_launcher.dart'; // Add url_launcher package for sharing via messaging apps
+import 'package:url_launcher/url_launcher.dart';
 
 void main() {
   runApp(NoteApp());
@@ -35,23 +35,17 @@ class _NoteHomePageState extends State<NoteHomePage> {
   TextEditingController _searchController = TextEditingController();
   List<Note> _notes = [];
   List<Note> _filteredNotes = [];
-  List<String> _folders = [
-    'Personal',
-    'Work',
-    'Ideas',
-    'Others'
-  ]; // Add list of folders
+  List<String> _folders = ['Personal', 'Work', 'Ideas', 'Others'];
 
-  String _selectedFolder = ''; // Initialize selected folder as empty string
+  String _selectedFolder = '';
 
   @override
   void initState() {
     super.initState();
     _loadNotes();
-    fetchNotes(); // Call fetchNotes when the app starts
+    fetchNotes();
   }
 
-  // Function to fetch notes from the server
   void fetchNotes({String searchTerm = ''}) async {
     try {
       final response = await http.get(
@@ -81,7 +75,7 @@ class _NoteHomePageState extends State<NoteHomePage> {
         _notes = notesStringList
             .map((noteString) => Note.fromMap(json.decode(noteString)))
             .toList();
-        _filteredNotes = _notes; // Initially set filtered notes to all notes
+        _filteredNotes = _notes;
       });
     }
   }
@@ -96,28 +90,19 @@ class _NoteHomePageState extends State<NoteHomePage> {
   _addNote() {
     setState(() {
       _notes.add(Note(
-        id: -1, // Temporary id
+        id: -1,
         title: _titleController.text,
         content: _contentController.text,
-        folder: _selectedFolder, // Set folder for the new note
+        folder: _selectedFolder,
         pinned: false,
       ));
       _titleController.clear();
       _contentController.clear();
-      _arrangeNotes(); // Arrange notes after adding new note
+      _arrangeNotes();
     });
     _saveNotes();
 
-    // ارسال درخواست POST
-    createNote(_titleController.text, _contentController.text).then((response) {
-      if (response.statusCode == 201) {
-        print('Note created successfully.');
-      } else {
-        print('Failed to create note. Error: ${response.reasonPhrase}');
-      }
-    }).catchError((error) {
-      print('Error occurred while creating note: $error');
-    });
+    _createNote(_titleController.text, _contentController.text);
   }
 
   Future<bool?> _deleteNoteDialog(int index) async {
@@ -151,7 +136,7 @@ class _NoteHomePageState extends State<NoteHomePage> {
       _notes.removeAt(index);
     });
     _saveNotes();
-    deleteNoteFromServer(_filteredNotes[index].id); // Delete note from server
+    deleteNoteFromServer(_filteredNotes[index].id);
   }
 
   _editNote(int index) async {
@@ -171,12 +156,11 @@ class _NoteHomePageState extends State<NoteHomePage> {
   _togglePin(int index) {
     setState(() {
       _notes[index].pinned = !_notes[index].pinned;
-      _arrangeNotes(); // Arrange notes after pinning/unpinning
+      _arrangeNotes();
     });
     _saveNotes();
   }
 
-  // Function to arrange notes based on their pinned status
   void _arrangeNotes() {
     List<Note> pinnedNotes = [];
     List<Note> unpinnedNotes = [];
@@ -197,46 +181,39 @@ class _NoteHomePageState extends State<NoteHomePage> {
 
     setState(() {
       _notes = pinnedNotes;
-      _applySearchFilter(); // Reapply search filter after rearranging notes
+      _applySearchFilter();
     });
   }
 
-  // Function to apply search filter on notes
   void _applySearchFilter() {
     String searchTerm = _searchController.text.toLowerCase();
     setState(() {
       if (searchTerm.isEmpty) {
-        _filteredNotes = _notes; // If search term is empty, show all notes
+        _filteredNotes = _notes;
       } else {
         _filteredNotes = _notes.where((note) {
           if (note.title.toLowerCase().contains(searchTerm) ||
               note.content.toLowerCase().contains(searchTerm)) {
-            return true; // If title or content contains search term
+            return true;
           } else {
             return note.folder.toLowerCase().contains(searchTerm) &&
                 (note.folder == _selectedFolder);
-            // If search term matches folder and selected folder
           }
         }).toList();
       }
     });
   }
 
-  // Function to share a note via email or messaging apps
   void _shareNote(Note note) async {
     String noteText = 'Title: ${note.title}\n\nContent: ${note.content}';
 
-    // Create shareable link or text
-    String shareableContent = noteText; // For simplicity, share note as text
+    String shareableContent = noteText;
 
-    // Define shareable content as email or message body
     String emailSubject = 'Shared Note: ${note.title}';
     String emailBody = shareableContent;
 
-    // Create shareable link or text for messaging apps
     String messageBody = shareableContent;
 
-    // Launch email app or messaging app with shareable content
     String emailUrl = 'mailto:?subject=$emailSubject&body=$emailBody';
     String messageUrl = 'sms:?body=$messageBody';
     String whatsappUrl = 'whatsapp://send?text=$messageBody';
@@ -264,10 +241,10 @@ class _NoteHomePageState extends State<NoteHomePage> {
             padding: const EdgeInsets.all(8.0),
             child: DropdownButtonFormField(
               value: _selectedFolder.isNotEmpty ? _selectedFolder : null,
-              onChanged: (value) {
+              onChanged: (newValue) {
                 setState(() {
-                  _selectedFolder = value.toString();
-                  _applySearchFilter(); // Call the search filter function
+                  _selectedFolder = newValue.toString();
+                  _applySearchFilter();
                 });
               },
               items: _folders.map((folder) {
@@ -278,7 +255,6 @@ class _NoteHomePageState extends State<NoteHomePage> {
               }).toList(),
               decoration: InputDecoration(
                 labelText: 'Select Folder',
-                border: OutlineInputBorder(),
               ),
             ),
           ),
@@ -291,75 +267,7 @@ class _NoteHomePageState extends State<NoteHomePage> {
               },
               decoration: InputDecoration(
                 labelText: 'Search',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                labelText: 'Title',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _contentController,
-              decoration: InputDecoration(
-                labelText: 'Content',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
-            child: ElevatedButton(
-              onPressed: () {
-                if (_titleController.text.isNotEmpty &&
-                    _contentController.text.isNotEmpty) {
-                  _addNote();
-                } else {
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        title: Text("Empty Fields"),
-                        content: Text("Please fill in both title and content."),
-                        actions: <Widget>[
-                          TextButton(
-                            child: Text("OK"),
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                }
-              },
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                child: Text(
-                  'Add Note',
-                  style: TextStyle(fontSize: 18.0),
-                ),
-              ),
-              style: ButtonStyle(
-                backgroundColor: MaterialStateProperty.all(
-                    Theme.of(context).colorScheme.secondary),
-                shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                  RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30.0),
-                  ),
-                ),
-                elevation: MaterialStateProperty.all(8),
+                prefixIcon: Icon(Icons.search),
               ),
             ),
           ),
@@ -367,54 +275,63 @@ class _NoteHomePageState extends State<NoteHomePage> {
             child: ListView.builder(
               itemCount: _filteredNotes.length,
               itemBuilder: (context, index) {
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _filteredNotes[index].selected =
-                          !_filteredNotes[index].selected;
-                    });
-                  },
-                  child: Card(
-                    elevation: 4,
-                    margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                    color: _filteredNotes[index].selected ? Colors.green : null,
-                    child: ListTile(
-                      title: Text(
-                        _filteredNotes[index].title,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
+                return ListTile(
+                  title: Text(_filteredNotes[index].title),
+                  subtitle: Text(
+                    _filteredNotes[index].content,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          _filteredNotes[index].pinned
+                              ? Icons.push_pin
+                              : Icons.push_pin_outlined,
+                          color: _filteredNotes[index].pinned
+                              ? Colors.amber
+                              : Colors.grey,
                         ),
+                        onPressed: () {
+                          _togglePin(index);
+                        },
                       ),
-                      subtitle: Text(_filteredNotes[index].content),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          IconButton(
-                            icon: Icon(Icons.edit),
-                            onPressed: () => _editNote(index),
-                          ),
-                          IconButton(
-                            icon: Icon(_filteredNotes[index].pinned
-                                ? Icons.push_pin
-                                : Icons.push_pin_outlined),
-                            onPressed: () => _togglePin(index),
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.delete),
-                            onPressed: () async {
-                              bool? delete = await _deleteNoteDialog(index);
-                              if (delete == true) {
-                                _deleteNote(index); // Delete note
+                      IconButton(
+                        icon: Icon(Icons.share),
+                        onPressed: () {
+                          _shareNote(_filteredNotes[index]);
+                        },
+                      ),
+                      PopupMenuButton<String>(
+                        onSelected: (value) {
+                          if (value == 'edit') {
+                            _editNote(index);
+                          } else if (value == 'delete') {
+                            _deleteNoteDialog(index).then((shouldDelete) {
+                              if (shouldDelete != null && shouldDelete) {
+                                _deleteNote(index);
                               }
-                            },
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.share),
-                            onPressed: () => _shareNote(_filteredNotes[index]),
-                          ),
-                        ],
+                            });
+                          }
+                        },
+                        itemBuilder: (BuildContext context) {
+                          return Map.fromEntries({
+                            'edit': 'Edit',
+                            'delete': 'Delete',
+                          }.entries.map((entry) {
+                            return MapEntry(
+                              entry.value,
+                              PopupMenuItem<String>(
+                                value: entry.key,
+                                child: Text(entry.value),
+                              ),
+                            );
+                          })).values.toList();
+                        },
                       ),
-                    ),
+                    ],
                   ),
                 );
               },
@@ -422,21 +339,88 @@ class _NoteHomePageState extends State<NoteHomePage> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: Text('Add Note'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    TextField(
+                      controller: _titleController,
+                      decoration: InputDecoration(
+                        hintText: 'Title',
+                      ),
+                    ),
+                    TextField(
+                      controller: _contentController,
+                      decoration: InputDecoration(
+                        hintText: 'Content',
+                      ),
+                      maxLines: 5,
+                    ),
+                  ],
+                ),
+                actions: <Widget>[
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      _addNote();
+                      Navigator.of(context).pop();
+                    },
+                    child: Text('Add'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+        child: Icon(Icons.add),
+      ),
     );
   }
 
-  // Function to delete note from server
-  void deleteNoteFromServer(int id) async {
+  Future<void> _createNote(String title, String text) async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://127.0.0.1:8000/notes/'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, dynamic>{
+          'title': title,
+          'text': text,
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Note created successfully
+        print('Note created successfully');
+      } else {
+        print('Failed to create note. Error: ${response.reasonPhrase}');
+      }
+    } catch (error) {
+      print('Error occurred while creating note: $error');
+    }
+  }
+
+  Future<void> deleteNoteFromServer(int noteId) async {
     try {
       final response = await http.delete(
-        Uri.parse(
-            'http://127.0.0.1:8000/notes/$id'), // Add id to server address
-        headers: <String, String>{
-          'Authorization': 'Bearer ${await getToken()}', // Use dynamic token
-        },
+        Uri.parse('http://127.0.0.1:8000/notes/$noteId'),
       );
+
       if (response.statusCode == 204) {
-        print('Note deleted successfully.');
+        // Note deleted successfully
+        print('Note deleted successfully');
       } else {
         print('Failed to delete note. Error: ${response.reasonPhrase}');
       }
@@ -444,54 +428,29 @@ class _NoteHomePageState extends State<NoteHomePage> {
       print('Error occurred while deleting note: $error');
     }
   }
-
-  // Dynamic token retrieval function
-  Future<String> getToken() async {
-    // Implement token retrieval from a suitable source such as SharedPreferences or elsewhere
-    return 'your_access_token';
-  }
-
-  // Dynamic token-based note creation function
-  Future<http.Response> createNote(String title, String text) async {
-    String token = await getToken(); // Use function to retrieve token
-    try {
-      final response = await http.post(
-        Uri.parse('http://127.0.0.1:8000/notes/'),
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-          'Authorization': 'Bearer $token', // Use token in Authorization header
-        },
-        body: jsonEncode(<String, String>{
-          'title': title,
-          'text': text,
-        }),
-      );
-      return response;
-    } catch (error) {
-      print('Error occurred while creating note: $error');
-      throw Exception('Failed to create note: $error');
-    }
-  }
 }
 
 class EditNotePage extends StatefulWidget {
   final Note note;
 
-  EditNotePage({Key? key, required this.note}) : super(key: key);
+  EditNotePage({required this.note});
 
   @override
   _EditNotePageState createState() => _EditNotePageState();
 }
 
 class _EditNotePageState extends State<EditNotePage> {
-  TextEditingController _editedTitleController = TextEditingController();
-  TextEditingController _editedContentController = TextEditingController();
+  late TextEditingController _titleController;
+  late TextEditingController _contentController;
+  List<String> _folders = ['Personal', 'Work', 'Ideas', 'Others'];
+  String _selectedFolder = '';
 
   @override
   void initState() {
     super.initState();
-    _editedTitleController.text = widget.note.title;
-    _editedContentController.text = widget.note.content;
+    _titleController = TextEditingController(text: widget.note.title);
+    _contentController = TextEditingController(text: widget.note.content);
+    _selectedFolder = widget.note.folder;
   }
 
   @override
@@ -501,39 +460,52 @@ class _EditNotePageState extends State<EditNotePage> {
         title: Text('Edit Note'),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+          children: <Widget>[
             TextField(
-              controller: _editedTitleController,
+              controller: _titleController,
               decoration: InputDecoration(
-                labelText: 'Title',
-                border: OutlineInputBorder(),
+                hintText: 'Title',
               ),
             ),
-            SizedBox(height: 8),
+            SizedBox(height: 16.0),
             TextField(
-              controller: _editedContentController,
+              controller: _contentController,
               decoration: InputDecoration(
-                labelText: 'Content',
-                border: OutlineInputBorder(),
+                hintText: 'Content',
               ),
-              maxLines: 3,
+              maxLines: 10,
             ),
-            SizedBox(height: 16),
+            SizedBox(height: 16.0),
+            DropdownButtonFormField(
+              value: _selectedFolder.isNotEmpty ? _selectedFolder : null,
+              onChanged: (newValue) {
+                setState(() {
+                  _selectedFolder = newValue.toString();
+                });
+              },
+              items: _folders.map((folder) {
+                return DropdownMenuItem(
+                  value: folder,
+                  child: Text(folder),
+                );
+              }).toList(),
+              decoration: InputDecoration(
+                labelText: 'Select Folder',
+              ),
+            ),
+            SizedBox(height: 16.0),
             ElevatedButton(
               onPressed: () {
-                Navigator.pop(
-                  context,
-                  Note(
-                    id: widget.note.id,
-                    title: _editedTitleController.text,
-                    content: _editedContentController.text,
-                    folder: widget.note.folder,
-                    pinned: widget.note.pinned,
-                  ),
+                Note updatedNote = Note(
+                  id: widget.note.id,
+                  title: _titleController.text,
+                  content: _contentController.text,
+                  folder: _selectedFolder,
+                  pinned: widget.note.pinned,
                 );
+                Navigator.pop(context, updatedNote);
               },
               child: Text('Save'),
             ),
@@ -548,36 +520,34 @@ class Note {
   final int id;
   final String title;
   final String content;
-  final String folder; // Add folder property to note
-  bool pinned;
-  bool selected;
+  final String folder;
+  late final bool pinned;
 
   Note({
     required this.id,
     required this.title,
     required this.content,
     required this.folder,
-    this.pinned = false,
-    this.selected = false,
+    required this.pinned,
   });
-
-  factory Note.fromMap(Map<String, dynamic> map) {
-    return Note(
-      id: map['id'],
-      title: map['title'],
-      content: map['text'],
-      folder: map['folder'], // Extract folder from map
-      pinned: map['pinned'],
-    );
-  }
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'title': title,
-      'text': content,
-      'folder': folder, // Add folder to map
+      'content': content,
+      'folder': folder,
       'pinned': pinned,
     };
+  }
+
+  factory Note.fromMap(Map<String, dynamic> map) {
+    return Note(
+      id: map['id'],
+      title: map['title'],
+      content: map['content'],
+      folder: map['folder'],
+      pinned: map['pinned'] ?? false,
+    );
   }
 }
