@@ -88,21 +88,47 @@ class _NoteHomePageState extends State<NoteHomePage> {
   }
 
   _addNote() {
+    final title = _titleController.text;
+    final content = _contentController.text;
+
+    if (title.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Title cannot be empty.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    if (content.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Content cannot be empty.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _notes.add(Note(
         id: -1,
-        title: _titleController.text,
-        content: _contentController.text,
+        title: title,
+        content: content,
         folder: _selectedFolder,
         pinned: false,
       ));
-      _titleController.clear();
-      _contentController.clear();
       _arrangeNotes();
     });
     _saveNotes();
 
-    _createNote(_titleController.text, _contentController.text);
+    // ایجاد نوت در سرور
+    _createNote(title, content);
+
+    // پاک کردن فیلدها بعد از اضافه کردن نوت
+    _titleController.clear();
+    _contentController.clear();
   }
 
   Future<bool?> _deleteNoteDialog(int index) async {
@@ -229,6 +255,21 @@ class _NoteHomePageState extends State<NoteHomePage> {
     }
   }
 
+  void _collaborateOnNote() {
+    // Implement collaboration feature here
+    // For example, you can use Firebase Firestore for real-time collaboration
+  }
+
+  void _viewNoteHistory(Note note) {
+    // Implement view note history feature here
+    // For example, you can use Firebase Firestore to store edit history
+  }
+
+  void _addAttachments() {
+    // Implement add attachments feature here
+    // For example, you can use Firebase Storage to upload and store attachments
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -302,6 +343,24 @@ class _NoteHomePageState extends State<NoteHomePage> {
                         icon: Icon(Icons.share),
                         onPressed: () {
                           _shareNote(_filteredNotes[index]);
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.people),
+                        onPressed: () {
+                          _collaborateOnNote();
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.history),
+                        onPressed: () {
+                          _viewNoteHistory(_filteredNotes[index]);
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.attach_file),
+                        onPressed: () {
+                          _addAttachments();
                         },
                       ),
                       PopupMenuButton<String>(
@@ -388,16 +447,40 @@ class _NoteHomePageState extends State<NoteHomePage> {
     );
   }
 
-  Future<void> _createNote(String title, String text) async {
+  Future<void> _createNote(String title, String content) async {
+    final String token =
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzE2OTgwOTEwLCJpYXQiOjE3MTYxMTY5MTAsImp0aSI6IjE0NjAzN2NkZTQ4YjRiMjQ5NzIxNjBkODg1MDM2NTBmIiwidXNlcl9pZCI6OX0.5Std6YNXiAh9_pQ2UZ0JTL4fUas95iENR0yOPQjITNY';
+
+    if (title.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Title cannot be empty.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    if (content.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Content cannot be empty.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
     try {
       final response = await http.post(
         Uri.parse('http://127.0.0.1:8000/notes/'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
+          'Authorization': 'Bearer $token',
         },
         body: jsonEncode(<String, dynamic>{
           'title': title,
-          'text': text,
+          'content': content, // مطمئن شوید که این کلید با کلید API مطابقت دارد
         }),
       );
 
@@ -405,10 +488,21 @@ class _NoteHomePageState extends State<NoteHomePage> {
         // Note created successfully
         print('Note created successfully');
       } else {
-        print('Failed to create note. Error: ${response.reasonPhrase}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                'Failed to create note. Error: ${response.statusCode}, ${response.reasonPhrase}, ${response.body}'),
+            duration: Duration(seconds: 5),
+          ),
+        );
       }
     } catch (error) {
-      print('Error occurred while creating note: $error');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error occurred while creating note: $error'),
+          duration: Duration(seconds: 5),
+        ),
+      );
     }
   }
 
